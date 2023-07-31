@@ -1,0 +1,12 @@
+Debug/
+Release/
+*.h~
+*.c~
+*.cbi
+*.cci
+*.cof
+*.fct
+*.hci
+*.prj~
+*_cof.*
+
