@@ -60,18 +60,12 @@ TWCR=0x44;// Generate Acknowledge Pulse: On; TWI Interrupt: Off
 ADMUX=ADC_VREF_TYPE & 0xff;
 ADCSRA=0x84;
 
-//offsetT = 0;// set[4][0];
-//offsetRH = 0;// set[4][1];
-//typeS = set[1][5];
+
 //setDAC();           // подать напряжение на аналоговые выходы
-BEEP = ON;
-delay_ms(300);
-BEEP = OFF;
-//delay_ms(1000);
-//Dht = readDHT();    // detect DHT-21/11
+
 //------ 1 Wire Protocol Functions ----------------------------------------------------------------------
 ds18b20 = w1_search(0xf0,familycode);// detect how many DS1820/DS18S20 devices are connected to the 1 Wire bus
-if((ds18b20+Dht)>MAX_DEVICES) ds18b20=(MAX_DEVICES-Dht);
+if((ds18b20)>MAX_DEVICES) ds18b20=(MAX_DEVICES);
 if(ds18b20) {           // если датчики были найдены
    w1_init();      // 1 Wire Bus initialization
    w1_write(0xCC); // Load Skip ROM [CCH] command
@@ -83,13 +77,6 @@ if(ds18b20) {           // если датчики были найдены
 //Clock_Ok = write_TWI(DS3231,0x0E,clock_buffer,2);
 Clock_Ok = read_TWI(DS_SRTC,0,clock_buffer,CLOCK_BUFFER);// чтение данных часовой микросхемы
 
-//BEEP = ON;
-//delay_ms(200);
-//BEEP = OFF;
-//delay_ms(200);
-//BEEP = ON;
-//delay_ms(200);
-//BEEP = OFF;
 // Global enable interrupts
 #asm("sei")
 
@@ -116,17 +103,13 @@ pointY += 30;
 ILI9341_WriteString(40, pointY, "Автоматична", Font_11x18, WHITE, fillScreen, 2);
 pointY += 30;
 ILI9341_WriteString(50, pointY, "вентиляцыя", Font_11x18, WHITE, fillScreen, 2);
-pointY += 35;
+pointY += 50;
 ILI9341_WriteString(90, pointY, "СКЫРОН", Font_11x18, WHITE, fillScreen, 2);
 pointY = pointY+45;
-sprintf(buff,"Датчикыв температури %u",ds18b20+Dht);    // количество датчиков
-ILI9341_WriteString(10, pointY, buff, Font_11x18, WHITE, fillScreen, 1);
-pointY = pointY+20;
-sprintf(buff,"Датчик вологосты %u",Dht);                // датчик AM2301
+sprintf(buff,"Датчикыв температури %u",ds18b20);    // количество датчиков
 ILI9341_WriteString(10, pointY, buff, Font_11x18, WHITE, fillScreen, 1);
 
 Sec=1; Display=1; newSetButt=1; timerOn=1; timerOff=1;
 temperature_check();
-if(!Dht) pvT = mean(ds18b20); 
+BeepT=50;
 delay_ms(1000);
-//ILI9341_FillScreen(0, max_X, 0, max_Y, BLUE1);

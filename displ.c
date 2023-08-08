@@ -5,19 +5,20 @@ void fraction(signed int t){
   frcval = t%10; intval = t/10;
 }
 
-//-------------------------------- СТАН ПОВІТРЯ. ----------------------------------------
+//-------------------------------- Общее состояние вентиляции. ---------------------------------------
 void displ_0(void){
  unsigned char i, keystop=0;
  unsigned int fillWindow = BLUE1, bordWindow = BLACK, temp;
+//    cnt++;
     if(newSetButt){newSetButt=0; keystop=1; ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);}// очистка экрана
 //-------------------------- Индикация часов --------------------------
     pointY = 3;
     if(Clock_Ok){
-        if(Night) ILI9341_WriteString(5,pointY,"НЫЧ ",Font_11x18,WHITE,BLACK,1); else ILI9341_WriteString(5,pointY,"ДЕНЬ",Font_11x18,BLACK,WHITE,1);
+//        if(cnt&1) temp=WHITE; else temp=fillWindow;
+//        ILI9341_FillRectangle(15,pointY+2,40,15,temp);
         read_TWI(DS_SRTC,0,clock_buffer,7);// чтение данных часовой микросхемы
-        sprintf(buff,"%02x:%02x   %02x.%02x.20%02x",clock_buffer[2],clock_buffer[1],clock_buffer[4],clock_buffer[5],clock_buffer[6]);//час:мин дата.мес.год
-        if(Night){ILI9341_WriteString(70,pointY,buff,Font_11x18,WHITE,GRAY1,1); ILI9341_WriteString(70,pointY,buff,Font_11x18,WHITE,BLACK,1);}// "БЕГУЩАЯ СТРОКА"
-        else {ILI9341_WriteString(70,pointY,buff,Font_11x18,BLACK,WHITE,1); ILI9341_WriteString(70,pointY,buff,Font_11x18,BLACK,fillWindow,1);}
+        sprintf(buff,"%02x:%02x   %02x.%02x.20%02x",clock_buffer[2],clock_buffer[1],clock_buffer[4],clock_buffer[5],clock_buffer[6]);//час:мин дата.мес.год 
+        ILI9341_WriteString(70,pointY,buff,Font_11x18,BLACK,fillWindow,1);
     }
     else {
         sprintf(buff,"Помилка часыв!"); 
@@ -26,7 +27,7 @@ void displ_0(void){
     if(keynum&&!keystop){checkkey(keynum); return;}//***************************** проверим нажатие кнопки ***************************************
     pointY += 22;
 //--- Индикация t ВОЗДУХА -----
-    temp = set[0][Night]; fraction(temp);     // проверка знака температуры
+    temp = spT[0]; fraction(temp);     // проверка знака температуры
     sprintf(buff,"[%2u.%u]",intval,frcval);   // ЗАДАНИЕ T показываем с десятичным знаком
     ILI9341_WriteString(5,pointY+5,buff,Font_11x18,bordWindow,fillWindow,1);
     ILI9341_WriteString(5,pointY+25,"температура",Font_11x18,bordWindow,fillWindow,1);
@@ -44,22 +45,13 @@ void displ_0(void){
     }; 
     ILI9341_FillRectangle(280,pointY+2,30,45,temp);
     if(keynum&&!keystop){checkkey(keynum); return;}//***************************** проверим нажатие кнопки ***************************************
-    pointY += 55;
-//--- Индикация RH ------
-    if(Dht){
-        sprintf(buff,"[%3u%%]",set[1][Night]); // ЗАДАНИЕ RH
-        ILI9341_WriteString(5,pointY+5,buff,Font_11x18,bordWindow,fillWindow,1);
-        ILI9341_WriteString(5,pointY+25,"вологысть",Font_11x18,bordWindow,fillWindow,1);
-        if(pvRH>100) sprintf(buff,"***%%",pvRH); else sprintf(buff,"%3u%%",pvRH);
-        ILI9341_WriteString(142,pointY,buff,Font_11x18,bordWindow,fillWindow,3);
-    }
-    else {
-        temp = t[2]; fraction(temp);     // проверка знака температуры
-        ILI9341_WriteString(5,pointY+5,"температура",Font_11x18,bordWindow,fillWindow,1);
-        ILI9341_WriteString(5,pointY+25,"зовнышня",Font_11x18,bordWindow,fillWindow,1);
-        if(temp<1250) sprintf(buff,"%2u.%u",intval,frcval); else sprintf(buff,"**.*");
-        ILI9341_WriteString(142,pointY,buff,Font_11x18,bordWindow,fillWindow,3);
-    } 
+    pointY += 52;
+//--- 
+    temp = t[2]; fraction(temp);     // проверка знака температуры 
+    ILI9341_WriteString(5,pointY, "зовнышня",Font_11x18,bordWindow,fillWindow,1);
+    ILI9341_WriteString(5,pointY+16,"температура",Font_11x18,bordWindow,fillWindow,1);    
+    if(temp<1250) sprintf(buff,"%2u.%u",intval,frcval); else sprintf(buff,"**.*");
+    ILI9341_WriteString(142,pointY,buff,Font_11x18,bordWindow,fillWindow,2); 
     // индикация тревоги alarm[1]
     switch (alarm[1]) {
         case 0: temp=GREEN; break;
@@ -69,36 +61,40 @@ void displ_0(void){
     ILI9341_FillRectangle(280,pointY+2,30,45,temp);
     if(keynum&&!keystop){checkkey(keynum); return;}//***************************** проверим нажатие кнопки ***************************************
 // --- Состояние выходов -------
-    pointY += 60;
+    pointY += 43;
     ILI9341_WriteString(70,pointY,"СТАН УПРАВЛЫННЯ",Font_11x18,bordWindow,fillWindow,1);
-    
+    ILI9341_FillScreen(0, max_X,135, max_Y, fillWindow);
     if(errors){
-        pointY += 20;
-        ILI9341_WriteString(5,pointY,"Помилка датчикыв!!",Font_11x18,RED,fillWindow,1);
+        if(errors&0x03){pointY += 18;      ILI9341_WriteString(5,pointY,"Помилка внутрышных датчикыв",Font_11x18,RED,fillWindow,1);}
+        else if(errors&0x04){pointY += 18; ILI9341_WriteString(5,pointY,"Помилка зовнішнього датчика",Font_11x18,RED,fillWindow,1);}
+        else if(errors&0xC0){pointY += 18; ILI9341_WriteString(5,pointY,"Велике відхилення температур",Font_11x18,RED,fillWindow,1);}           
+        if(noAutoRel){
+            pointY += 18;
+            sprintf(buff,"R-");
+            sprintf(txt,"виходи: %u в ручному режимы",noAutoRel);
+            strcat(buff,txt);
+            ILI9341_WriteString(5,pointY,buff,Font_11x18,RED,fillWindow,1);
+        }
+        if(noAutoAna){
+            pointY += 18;
+            sprintf(buff,"U-");
+            sprintf(txt,"виходи: %u в ручному режимы",noAutoAna);
+            strcat(buff,txt);
+            ILI9341_WriteString(5,pointY,buff,Font_11x18,RED,fillWindow,1);
+        }
+                         
     }
-    pointY += 20;
-    sprintf(buff,"<R> виходи: ");
-    if(noAutoRel) {sprintf(txt,"%u в ручному", noAutoRel); bordWindow = RED;}
-    else {sprintf(txt,"в автоматичному"); bordWindow = BLACK;}
-    strcat(buff,txt);
-    ILI9341_WriteString(5,pointY,buff,Font_11x18,bordWindow,fillWindow,1);
-    pointY += 20;
-    sprintf(buff,"<U> виходи: ");
-    if(noAutoAna) {sprintf(txt,"%u в ручному", noAutoAna); bordWindow = RED;}
-    else {sprintf(txt,"в автоматичному"); bordWindow = BLACK;}
-    strcat(buff,txt);
-    ILI9341_WriteString(5,pointY,buff,Font_11x18,bordWindow,fillWindow,1);           
+    else {pointY += 25; ILI9341_WriteString(80,pointY,"Помилок немаэ",Font_11x18,bordWindow,fillWindow,1);}               
 }
 
-//-------------------------------- ВСЕ датчики. -------------------------------------------
+//-------------------------------- Значение всех датчиков. -------------------------------------------
 void displ_1(void){
  unsigned char i, num = 1;
  signed int temp;
  unsigned int fillWindow = YELLOW2, bordWindow = BLACK;
-    pointY = 7;
+    pointY = 7; //keynum=0;
     if(newSetButt){
-        newSetButt=0;
-        ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
+        newSetButt=0; ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
         ILI9341_WriteString(100,pointY,"СТАН ДАТЧИКЫВ",Font_11x18,bordWindow,fillWindow,1);
     }
 //--- Индикация t ГРУНТА ---
@@ -116,34 +112,17 @@ void displ_1(void){
             ILI9341_WriteString(90,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
             pointY += 35;
         };
-    }
-    if(Dht){
-        sprintf(buff,"зона %u",i+1);
-        ILI9341_WriteString(5,pointY+12,buff,Font_11x18,bordWindow,fillWindow,1);
-        temp = pvT;
-        if(temp>1250) sprintf(buff,"**.*");
-        else {
-            fraction(temp);     // проверка знака температуры
-            sprintf(buff,"%2u.%u",intval,frcval); // T датчиков показываем с десятичным знаком 
-        }
-        ILI9341_WriteString(90,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
-        pointY += 35;
-        sprintf(buff,"вологысть");
-        ILI9341_WriteString(5,pointY+12,buff,Font_11x18,bordWindow,fillWindow,1);
-        if(pvRH>100) sprintf(buff,"***%%",pvRH); else sprintf(buff,"%3u%%",pvRH);
-        ILI9341_WriteString(90,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
     } 
     if(keynum){checkkey(keynum); return;}//***************************** проверим нажатие кнопки ***************************************
 }
 
-//------------------------------ РЕЛЕЙНЫЕ ВЫХОДЫ --------------------------------------------
+//-------------------------------- Состояние ВЫХОДОВ -------------------------------------------------
 void displ_2(void){
  signed char i, x, keystop=0;
  unsigned int fillWindow = GRAY1, bordWindow = BLACK, color_box; 
-    pointY=7;
+    pointY=7; //keynum=0;
     if(newSetButt){
-        newSetButt=0; keystop=1;
-        ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
+        newSetButt=0; keystop=1; ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
         ILI9341_WriteString(90,pointY,"СТАН УПРАВЛЫННЯ",Font_11x18,bordWindow,fillWindow,1);
     }
 //---- РЕЛЕЙНЫЕ ВЫХОДЫ ----
@@ -172,19 +151,19 @@ void displ_2(void){
     if(keynum&&!keystop){checkkey(keynum); return;}//***************************** проверим нажатие кнопки ***************************************
 }
 
-//--- Установки Общий список ----
+//-------------------------------- Начальные пункты меню ---------------------------------------------
 void displ_3(void){
  char item;
  unsigned int fillWindow = GREEN1, bordWindow = BLACK, color_txt = BLACK, color_fon = GREEN1; 
-  pointY=7;
-  if (newSetButt){
-    newSetButt=0;
-    ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
+  pointY=7; //keynum=0;
+  if(newSetButt){
+    newSetButt=0; ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
     ILI9341_WriteString(50,pointY,"НАЛАШТУВАННЯ СИСТЕМИ",Font_11x18,bordWindow,fillWindow,1);
   }
   pointY += 25;
-  for (item = 0; item < MENU0; item++){
-    sprintf(buff,"%s",setMenu[item]);   //  %10s
+  //---
+  for (item = 0; item < MENU; item++){
+    sprintf(buff,"%s",setMenu[item]);   //------ "Головнi","Щаблi","Функцiя","Системнi" -------- (numMenu)
     if(item == numMenu){color_txt = WHITE; color_fon = BLACK;} else {color_txt = BLACK; color_fon = GREEN1;}
     ILI9341_WriteString(20,pointY,buff,Font_11x18,color_txt,color_fon,1);    
     pointY += 25;
@@ -192,78 +171,64 @@ void displ_3(void){
   if(keynum){checkkey(keynum); return;}//***************************** проверим нажатие кнопки ***************************************
 }
 
-//- Установки пунктов -
+//-------------------------------- Все подменю -------------------------------------------------------
 void displ_4(void){
  char item, keystop=0, tmpv0, tmpv1;
  unsigned int fillWindow = GREEN1, bordWindow = BLACK, color_txt = BLACK, color_fon = GREEN1, temp;
-  pointY=7;
-  if (newSetButt){
-    newSetButt=0; keystop=1;
-    ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
+  pointY=7; //keynum=0;
+  if(newSetButt){
+    newSetButt=0; keystop=1; ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
     sprintf(buff,"%s",setMenu[numMenu]);
     ILI9341_WriteString(80,pointY,buff,Font_11x18,bordWindow,fillWindow,1);
   }
   pointY += 25;
+  //---
   switch (numMenu){
-    case 0: //-------- "Температура" ---------
-        for (item = 0; item < MENU1;item++){
-            if (item<4){
-                temp = set[0][item]; tmpv0 = temp%10; tmpv1 = temp/10;
-                sprintf(buff,"%7s = %2u.%u", setName0[item],tmpv1,tmpv0); // T с десятичным знаком
-            }
-            else if(item==4) {
-                sprintf(buff,"%7s = ", setName0[item]);
-                if(set[0][item]==1) strcat(buff,"НАГРЫВ");
-                else  strcat(buff,"ОХОЛОДЖЕННЯ"); 
-            }
-            else sprintf(buff,"%8s = %i", setName0[item],set[0][item]);
-            if (item == numSet){color_txt = WHITE; color_fon = BLACK;} else {color_txt = BLACK; color_fon = GREEN1;}
-            ILI9341_WriteString(15,pointY,buff,Font_11x18,color_txt,color_fon,1);
-            pointY += 25;
-        }
-    break;
-    case 1: //-------- "Влажность" -----------
-        for (item = 0; item < MENU1;item++){
-            if(item<4) sprintf(buff,"%8s = %i%%", setName0[item],set[1][item]);
-            else if(item==4) {
-                sprintf(buff,"%8s = ", setName0[item]);
-                if(set[1][item]==1) strcat(buff,"ЗВОЛОЖЕННЯ");
-                else  strcat(buff,"ОСУШЕННЯ"); 
-            }
-            else sprintf(buff,"%8s = %i", setName0[item],set[1][item]);
-            if (item == numSet){color_txt = WHITE; color_fon = BLACK;} else {color_txt = BLACK; color_fon = GREEN1;}
-            ILI9341_WriteString(15,pointY,buff,Font_11x18,color_txt,color_fon,1);
-            pointY += 25;
-        }
-    break;
-    case 2: //-------- "Таймер" --------------
-        for (item = 0; item < MAX_6;item++){
-            if(item==1||item==3){
-                sprintf(buff,"%8s = ", setName1[item]);
-                if (set[4][item]==0) strcat(buff,"СЕКУНД");
-                else strcat(buff,"ХВИЛИН");
-            }
-            else sprintf(buff,"%8s = %i", setName1[item],set[4][item]);
+    //--------------------- Подменю "Головнi" -------------------------------------
+    case 0: 
+        for (item = 0; item < LIST0; item++){
+            temp = spT[item]; tmpv0 = temp%10; tmpv1 = temp/10;
+            sprintf(buff,"%11s = %2u.%u", setName0[item],tmpv1,tmpv0); //------ "Температура","Верхня межа","Нижня межа" -------- (subMenu)   
             if(item == numSet){color_txt = WHITE; color_fon = BLACK;} else {color_txt = BLACK; color_fon = GREEN1;}
-            ILI9341_WriteString(15,pointY,buff,Font_11x18,color_txt,color_fon,1);
+            ILI9341_WriteString(20,pointY,buff,Font_11x18,color_txt,color_fon,1);    
             pointY += 25;
         }
     break;
-    case 3: //-------- "День Ночь" -----------
-        for (item = 0; item < MAX_6;item++){
-            sprintf(buff,"%11s = %02i:00 год.", setName2[item],rtcTodec(set[5][item]));
-            if (item == numSet){color_txt = WHITE; color_fon = BLACK;} else {color_txt = BLACK; color_fon = GREEN1;}
-            ILI9341_WriteString(5,pointY,buff,Font_11x18,color_txt,color_fon,1);
+    //--------------------- Подменю "Щаблі" ---------------------------------------
+    case 1: 
+        for (item = 0; item < LIST1; item++){
+            sprintf(buff,"%s",setName1[item]);   //------ "Змiщення", "Гiстерезис" -------- (subMenu)
+            if(item == subMenu){color_txt = WHITE; color_fon = BLACK;} else {color_txt = BLACK; color_fon = GREEN1;}
+            ILI9341_WriteString(20,pointY,buff,Font_11x18,color_txt,color_fon,1);    
             pointY += 25;
         }
     break;
-    case 4: //-------- "Время и Дата" ---------------
-        for (item = 0; item < MAX_5;item++){
+    //--------------------- Подменю "Функція" -------------------------------------
+    case 2: 
+        for (item = 0; item < LIST2; item++){
+            sprintf(buff,"%s",setName2[item]);   //------ "Змiщення","КОФ.1","КОФ.2","MIN","MAX" -------- (subMenu)
+            if(item == subMenu){color_txt = WHITE; color_fon = BLACK;} else {color_txt = BLACK; color_fon = GREEN1;}
+            ILI9341_WriteString(20,pointY,buff,Font_11x18,color_txt,color_fon,1);    
+            pointY += 25;
+        }
+    break;
+    //--------------------- Подменю "Час Дата" ------------------------------------
+    case 3: 
+        for (item = 0; item < LIST3;item++){
             if (item<2) tmpv0 = clock_buffer[item+1];
-            else tmpv0 = clock_buffer[item+2]; 
-            sprintf(buff,"%8s = %x", setName7[item],tmpv0);
+            else tmpv0 = clock_buffer[item+2];   //------ "Хвилини","Години","День","Мiсяц","Рiк" -------- (subMenu)
+            sprintf(buff,"%8s = %x", setName3[item],tmpv0);
             if (item == numSet){color_txt = WHITE; color_fon = BLACK;} else {color_txt = BLACK; color_fon = GREEN1;}
             ILI9341_WriteString(5,pointY,buff,Font_11x18,color_txt,color_fon,1);            
+            pointY += 25;
+        }
+    break;
+    //--------------------- Подменю "Системні" ------------------------------------
+    case 4: 
+        for (item = 0; item < LIST4;item++){
+            sprintf(buff,"%9s = %2u", setName4[item],spT[item+3]);
+            if (item == numSet){color_txt = WHITE; color_fon = BLACK;} else {color_txt = BLACK; color_fon = GREEN1;}
+            ILI9341_WriteString(5,pointY,buff,Font_11x18,color_txt,color_fon,1);
             pointY += 25;
         }
     break;    
@@ -271,166 +236,142 @@ void displ_4(void){
   if(keynum&&!keystop){checkkey(keynum); return;}//***************************** проверим нажатие кнопки ***************************************   
 }
 
-//- РЕДАКТИРОВАНИЕ -
+//-------------------------------- РЕДАКТИРОВАНИЕ ----------------------------------------------------
 void displ_5(void){
  char tmpv0, tmpv1;
  unsigned int fillWindow = GREEN1, bordWindow = BLACK, temp;
-  pointY=7;
-  if (newSetButt){
-    newSetButt=0;
-    ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
-    pauseEdit = 3;
-    sprintf(buff,"РЕДАГУВАННЯ %s", setMenu[numMenu]);
-    ILI9341_WriteString(20,pointY,buff,Font_11x18,bordWindow,fillWindow,1); 
-  }
-  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  pointY = pointY+50;
-   switch (numMenu){
-    case 0: //-------- "Температура" ---------
-      if (numSet<4){
-        temp = newval[numSet]; tmpv0 = temp%10; tmpv1 = temp/10;
-        sprintf(buff,"%5s = %3u.%u", setName0[numSet],tmpv1,tmpv0); // T с десятичным знаком
-        ILI9341_WriteString(5,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
-      }
-      else if(numSet==4) {
-        sprintf(buff,"%7s = ", setName0[numSet]);
-        if(newval[numSet]==1) strcat(buff,"НАГРЫВ     ");
-        else strcat(buff,"ОХОЛОДЖЕННЯ");
-        ILI9341_WriteString(15,pointY,buff,Font_11x18,bordWindow,fillWindow,1);
-      }
-      else {
-        sprintf(buff,"%7s = %i", setName0[numSet],newval[numSet]);
-        ILI9341_WriteString(5,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
-      }      
-    break;
-    case 1: //-------- "Влажность" -----------
-      if(numSet<4){
-        sprintf(buff,"%7s = %3i%%", setName0[numSet],newval[numSet]);
-        ILI9341_WriteString(5,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
-      }
-      else if(numSet==4) {
-        sprintf(buff,"%8s = ", setName0[numSet]);
-        if(newval[numSet]==1) strcat(buff,"ЗВОЛОЖЕННЯ");
-        else  strcat(buff,"ОСУШЕННЯ  ");
-        ILI9341_WriteString(15,pointY,buff,Font_11x18,bordWindow,fillWindow,1); 
-      }
-      else {
-        sprintf(buff,"%7s = %i", setName0[numSet],newval[numSet]);
-        ILI9341_WriteString(5,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
-      }
-    break;
-    case 2: //-------- "Таймер" --------------
-        sprintf(buff,"%5s: %3i ", setName1[numSet], newval[numSet]);
-        ILI9341_WriteString(5,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
-    break;
-    case 3: //-------- "День Ночь" -----------
-        sprintf(buff,"%5s: %3i ", setName2[numSet], newval[numSet]);
-        ILI9341_WriteString(5,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
-    break;
-    case 4: //-------- "Время и Дата" ---------------
-        sprintf(buff,"%7s: %3u ", setName7[numSet], newval[numSet]);
-        ILI9341_WriteString(5,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
-    break;
-   }
+    pointY=7;
+    if(newSetButt){
+        ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
+        pauseEdit = 3;
+        sprintf(buff,"РЕДАГУВАННЯ %s", setMenu[numMenu]);
+        ILI9341_WriteString(20,pointY,buff,Font_11x18,bordWindow,fillWindow,1); 
+    }
+    pointY = pointY+50;
+    switch (numMenu){
+        case 0: //-------- "Температура" ---------
+            if(newSetButt){
+                sprintf(buff,"%12s",setName0[numSet]);  // "Температура","Верхня межа","Нижня межа"
+                ILI9341_WriteString(5,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
+            }
+            temp = newval[numSet]; tmpv0 = temp%10; tmpv1 = temp/10;
+            sprintf(buff,"%3u.%u",tmpv1,tmpv0);     // T с десятичным знаком
+            ILI9341_WriteString(80,pointY+40,buff,Font_11x18,bordWindow,fillWindow,2);    
+        break;
+        case 3: //-------- "Час Дата" ------------
+            sprintf(buff,"%7s:%02u",setName3[numSet],newval[numSet]);  // "Хвилини","Години","День","Мiсяц","Рiк"
+            ILI9341_WriteString(5,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
+        break;
+        case 4: //-------- "Системні" -------------- 
+            sprintf(buff,"%9s:%u",setName4[numSet],newval[numSet]);  // "Bluetooth","Iнше"
+            ILI9341_WriteString(5,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
+        break;
+    }
+   newSetButt=0;
    if(--pauseEdit==0){pauseEdit=1; if(keynum) checkkey(keynum);}//***************************** проверим нажатие кнопки ***************************************
 }
 
-//--- Установки Общий список коэффициентов ----
+//-------------------------------- Установки ступеней ** numMenu=1; subMenu=0->"Змiщення", subMenu=1->"Гiстерезис"--
 void displ_6(void){
- char item;
- unsigned int fillWindow = GREEN1, bordWindow = BLACK, color_txt = BLACK, color_fon = GREEN1; 
-  pointY=7;
-  if (newSetButt){
-    newSetButt=0;
-    ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
-    ILI9341_WriteString(20,pointY,"НАЛАШТУВАННЯ КОЕФЫЦЫЭНТЫВ",Font_11x18,bordWindow,fillWindow,1);
-  }
-  pointY += 35;
-  for (item = 0; item < MAX_5; item++){
-    sprintf(buff,"Набыр коефыцыэнтыв N%u",item+1);
-    if(item == numMenu){color_txt = WHITE; color_fon = BLACK;} else {color_txt = BLACK; color_fon = GREEN1;}
-    ILI9341_WriteString(20,pointY,buff,Font_11x18,color_txt,color_fon,1);    
-    pointY += 25;
-  }
+ char item, tmpv0, tmpv1;
+ unsigned int fillWindow = GREEN1, bordWindow = BLACK, color_txt = BLACK, color_fon = GREEN1, temp; 
+    pointY=7;
+    if (newSetButt){
+        newSetButt=0; ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
+        ILI9341_WriteString(20,pointY,"НАЛАШТУВАННЯ ЩАБЛЫВ",Font_11x18,bordWindow,fillWindow,1);
+    }
+    pointY += 35;
+    for (item = 0; item < 4; item++){        
+        temp = digital[item][subMenu]; tmpv0 = temp%10; tmpv1 = temp/10;
+        sprintf(buff,"%8s R%u = %2u.%u",setName1[subMenu],item+1,tmpv1,tmpv0);
+        if(item == numSet){color_txt = WHITE; color_fon = BLACK;} else {color_txt = BLACK; color_fon = GREEN1;}
+        ILI9341_WriteString(20,pointY,buff,Font_11x18,color_txt,color_fon,1);    
+        pointY += 25;
+    }
   if(keynum) checkkey(keynum);//***************************** проверим нажатие кнопки ***************************************
 }
 
-//- Установки пунктов -
+//-------------------------------- Установки функций  ** numMenu=1; subMenu=0->"Змiщення", subMenu=1->"КОФ.1"...  --
 void displ_7(void){
  char item, tmpv0, tmpv1;
  unsigned int fillWindow = GREEN1, bordWindow = BLACK, color_txt = BLACK, color_fon = GREEN1, temp;
     pointY=7;
     if(newSetButt){
-    newSetButt=0;
-    ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
-    if(moduleEdit) sprintf(buff,"Модуль N%u",numMenu+1);   //- Установки отдельный значений модулей
-    else sprintf(buff,"Набыр коефыцыэнтыв N%u",numMenu+1); //- Установки отдельный значений коэффициентов
-    ILI9341_WriteString(20,pointY,buff,Font_11x18,bordWindow,fillWindow,1);
+        newSetButt=0; ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
+        ILI9341_WriteString(20,pointY,"НАЛАШТУВАННЯ ФУНКЦЫЙ",Font_11x18,bordWindow,fillWindow,1);
     }
     pointY += 25;
-    for (item = 0; item < 2;item++){
-        if(moduleEdit) sprintf(buff,"%7s = %i", setName3[item],module[numMenu][item]);
-        else sprintf(buff,"%7s = %i", setName3[item],limit[numMenu][item]);
-        if (item == numSet){color_txt = WHITE; color_fon = BLACK;} else {color_txt = BLACK; color_fon = GREEN1;}
-        ILI9341_WriteString(5,pointY,buff,Font_11x18,color_txt,color_fon,1);
+    for (item = 0; item < 4; item++){        
+        if(subMenu){
+            temp = analog[item][subMenu];
+            sprintf(buff,"%8s U%u = %3u ",setName2[subMenu],item+1,temp);
+        }
+        else {
+            temp = analog[item][subMenu]; tmpv0 = temp%10; tmpv1 = temp/10;
+            sprintf(buff,"%8s U%u = %2u.%u",setName1[subMenu],item+1,tmpv1,tmpv0);
+        }
+        if(item == numSet){color_txt = WHITE; color_fon = BLACK;} else {color_txt = BLACK; color_fon = GREEN1;}
+        ILI9341_WriteString(20,pointY,buff,Font_11x18,color_txt,color_fon,1);    
         pointY += 25;
     }
    if(keynum) checkkey(keynum);//***************************** проверим нажатие кнопки ***************************************   
 }
 
-//- РЕДАКТИРОВАНИЕ -
+//-------------------- РЕДАКТИРОВАНИЕ Установки ступеней ** numMenu=1; subMenu=0->"Змiщення", subMenu=1->"Гiстерезис"--
 void displ_8(void){
  char tmpv0, tmpv1;
  unsigned int fillWindow = GREEN1, bordWindow = BLACK, temp;
   pointY=7;
   if (newSetButt){
-    newSetButt=0;
-    ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
+    newSetButt=0; ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
     pauseEdit = 3;
-    if(moduleEdit) sprintf(buff,"РЕДАГУВАННЯ модуля N%u",numMenu+1); 
-    else sprintf(buff,"РЕДАГУВАННЯ коефыцыэнтыв N%u", numMenu+1);
+    sprintf(buff,"РЕДАГУВАННЯ %s T%u",setName1[subMenu],numSet+1);
     ILI9341_WriteString(10,pointY,buff,Font_11x18,bordWindow,fillWindow,1); 
   }
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     pointY = pointY+50;
-    sprintf(buff,"%7s:%4i", setName3[numSet], newval[numSet]);
+    temp = newval[numSet]; tmpv0 = temp%10; tmpv1 = temp/10;
+    sprintf(buff,"%s:%2u.%u",setName1[subMenu],tmpv1,tmpv0);
     ILI9341_WriteString(5,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
     if(--pauseEdit==0){pauseEdit=1; if(keynum) checkkey(keynum);}//***************************** проверим нажатие кнопки ***************************************
 }
 
-//--- Установки модулей ----
+//-------------------- РЕДАКТИРОВАНИЕ Установки функций  ** numMenu=1; subMenu=0->"Змiщення", subMenu=1->"КОФ.1"...  --
 void displ_9(void){
- char item;
- unsigned int fillWindow = GREEN1, bordWindow = BLACK, color_txt = BLACK, color_fon = GREEN1; 
-  pointY=7;
-  if (newSetButt){
-    newSetButt=0;
-    ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
-    ILI9341_WriteString(20,pointY,"НАЛАШТУВАННЯ МОДУЛЫВ",Font_11x18,bordWindow,fillWindow,1);
-  }
-  pointY += 35;
-  for (item = 0; item < MAX_4; item++){
-    sprintf(buff,"Модуль N%u",item+1);
-    if(item == numMenu){color_txt = WHITE; color_fon = BLACK;} else {color_txt = BLACK; color_fon = GREEN1;}
-    ILI9341_WriteString(20,pointY,buff,Font_11x18,color_txt,color_fon,1);    
-    pointY += 25;
-  }
-  if(keynum) checkkey(keynum);//***************************** проверим нажатие кнопки ***************************************
+ char item, tmpv0, tmpv1;
+ unsigned int fillWindow = GREEN1, bordWindow = BLACK, color_txt = BLACK, color_fon = GREEN1, temp; 
+    pointY=7;
+    if (newSetButt){
+        newSetButt=0; ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
+        sprintf(buff,"РЕДАГУВАННЯ %s T%u",setName2[subMenu],numSet+1);
+        ILI9341_WriteString(10,pointY,buff,Font_11x18,bordWindow,fillWindow,1);
+    }
+    pointY = pointY+50;
+    if(subMenu){
+        temp = newval[numSet];
+        sprintf(buff,"%s:%3u",setName2[subMenu],temp);
+    }
+    else {
+        temp = newval[numSet]; tmpv0 = temp%10; tmpv1 = temp/10;
+        sprintf(buff,"%s:%2u.%u",setName1[subMenu],tmpv1,tmpv0);
+    }
+    ILI9341_WriteString(5,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
+    if(keynum) checkkey(keynum);//***************************** проверим нажатие кнопки ***************************************
 }
 
 void display(void){
  switch (displ_num){
-    case 0: displ_0(); break;
-    case 1: displ_1(); break;
-    case 2: displ_2(); break;
-    case 3: displ_3(); break;
-    case 4: displ_4(); break;
-    case 5: displ_5(); break;
-    case 6: displ_6(); break;
-    case 7: displ_7(); break;
-    case 8: displ_8(); break;
-    case 9: displ_9(); break;
-    default: displ_0(); break;
+    case 0: displ_0(); break;  // Общее состояние вентиляции.
+    case 1: displ_1(); break;  // Значение всех датчиков.
+    case 2: displ_2(); break;  // Состояние ВЫХОДОВ
+    case 3: displ_3(); break;  // Начальные пункты меню
+    case 4: displ_4(); break;  // Все подменю
+    case 5: displ_5(); break;  // РЕДАКТИРОВАНИЕ
+    case 6: displ_6(); break;  // Установки ступеней
+    case 7: displ_7(); break;  // Установки функций
+    case 8: displ_8(); break;  // РЕДАКТИРОВАНИЕ Установки ступеней
+    case 9: displ_9(); break;  // РЕДАКТИРОВАНИЕ Установки функций
+    default: displ_0(); break; // Общее состояние вентиляции.
   }
 }
 

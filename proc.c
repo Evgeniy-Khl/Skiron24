@@ -1,7 +1,5 @@
 #define TUNING    170
 
-//unsigned char txtTimer[20];
-
 void temperature_check(void){
  int val;
  unsigned char item, byte, crc, try=0;
@@ -22,7 +20,7 @@ void temperature_check(void){
             //----- Коректировка датчика DS18B20 ----------
             if(ds.buffer[2]==TUNING) val +=(signed char)ds.buffer[3]; // корекция показаний датчика
         }
-        else if (++try > 2) {val = 1990; try = 0; errors |= 1<<item;}// (199.0) если ошибка более X раз то больше не опрашиваем     
+        else if (++try > 2) {val = 1990; try = 0; errors |= (1<<item);}// (199.0) если ошибка более X раз то больше не опрашиваем     
         t[item] = val; 
         if (try==0) item++;
     }
@@ -34,22 +32,9 @@ void temperature_check(void){
 signed int mean(char item){
 unsigned char i, x=0;
 signed int tt=0;
- for (i=0; i<item; i++)
-  {
-    if(t[i] < 1200) {tt += t[i]; x++;}
-    else errors |= 0x10;                  // 0x10 - ошибка датчиков среднего значения внутр. воздуха
-  };
- if(x) tt /= x;
- else tt = 1990;                         // записываем 0x063F = 199.0 C
+ for (i=0; i<item; i++){if(t[i] < 850) {tt += t[i]; x++;}};
+ if(x) tt /= x; else {tt = 1900; errors |= 0x08;}  // 0x08 - ошибка датчиков среднего значения внутр. воздуха
  return tt;
-}
-
-signed int LowPassF2(signed int t,unsigned char i){
-float val;
-  val = A1*Told1[i]-A2*Told2[i]+A3*t;
-  Told2[i] = Told1[i];
-  Told1[i] = val;
-  return val;
 }
 
 void setDAC(void){ // V = Vref x (255/256)
@@ -75,12 +60,6 @@ void setDAC(void){ // V = Vref x (255/256)
 
 unsigned char adapt(unsigned char val){
     val <<= 1; val += ZERO;
-    return val;
-}
-
-unsigned char limitationOut(unsigned char val, unsigned char n){// ограничение управляющего сигнала
-    if(val<limit[n][0]) val = limit[n][0];
-    if(val>limit[n][1]) val = limit[n][1];
     return val;
 }
 
