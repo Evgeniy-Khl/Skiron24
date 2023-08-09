@@ -60,8 +60,9 @@ Program size   : 10823 words (21646 bytes), 66,1% of FLASH [xxxx] EEPROM [xxxx] 
 #define SQWE_1Hz        0x10
 
 // Declare your global variables here
-flash float A1[2]={1.8,1.2}, A2[2]={0.81,0.36}, A3[2]={0.01,0.16};  // a[0]=0.9 и a[1]=0.6
-unsigned char BeepT, flags, keynum, keycount, keywait, ok, relayOut, newSetButt, ds18b20, pointY, DHTexist, signchar, intval, frcval, errors, noAutoRel, noAutoAna;
+//flash float A1=1.8, A2=0.81, A3=0.01;  // порядок a=0.9 (A1=2a; A2=a^2; A3=(1-a)^2)
+flash float A1=1.6, A2=0.64, A3=0.04;  // порядок a=0.8 (A1=2a; A2=a^2; A3=(1-a)^2)
+unsigned char BeepT, keynum, keycount, keywait, ok, relayOut, newSetButt, ds18b20, pointY, DHTexist, signchar, intval, frcval, errors, noAutoRel, noAutoAna;
 signed char numMenu, subMenu, numSet, displ_num, pauseEdit;
 unsigned char relOut[4]={0}, analogOut[4]={0}, dacU[4]={ZERO}, buff[40], familycode[MAX_DEVICES][9], clock_buffer[CLOCK_BUFFER], alarm[4]={2,2,2,2};
 unsigned int  max_X, max_Y, timerOn, timerOff, fillScreen = BLACK;
@@ -76,12 +77,12 @@ const char* setName4[LIST4]={"Bluetooth","Ынше"};            // подменю "Системн
 //--------------- union declaration -----------------------------------------------
 union {unsigned char buffer[8]; unsigned int pvT;} ds;          // буффер микросхемы DS18B20
 //---------------------------------------------------------------------------------
-float Told1[8], Told2[8], iPart[4];
+float Told1[4], Told2[4];
 //-------------------------
 eeprom signed char relaySet[4] ={-1,-1,-1,-1};
 eeprom signed char analogSet[4]={-1,-1,-1,-1};
 // Основные уставки -      Т;  max. min.
-eeprom signed int spT[5]={270, 300, 200, 0, 0};
+eeprom signed int spT[5]={250, 300, 200, 0, 0};
 // Уставка относительной температуры ЦИФРОВЫХ выходов
 eeprom unsigned char digital[4][2]={    // [0]-> dТ смещение температуры; [1]-> ГИСТЕРЕЗИС
                     { 5, 1},       // 0 - Ступень I  
@@ -89,21 +90,15 @@ eeprom unsigned char digital[4][2]={    // [0]-> dТ смещение температуры; [1]-> 
                     {15, 3},       // 2 - Ступень III
                     {20, 4}};      // 3 - Ступень IV
 // Уставка относительной температуры АНАЛОГОВЫХ выходов
-eeprom unsigned char analog[4][5]={     // [0]-> dТ смещение температуры; [1]-> Проп. коэфф.; [2]-> Интегр. коэфф.; [3]-> MIN; [4]-> MAX
-                    {20, 20, 100, 0, 100},  // 0 - Аналоговый ВЫХОД I   Тунельная вентиляция
-                    {10, 20, 100, 0, 100},  // 1 - Аналоговый ВЫХОД II  Положение заслонок вытяжной вентиляции
-                    {15, 20, 100, 0, 100},  // 2 - Аналоговый ВЫХОД III Положение заслонок приточной вентиляции
-                    { 5, 20, 100, 0, 100}}; // 3 - Аналоговый ВЫХОД IV  Положение клапана горячей воды.
+eeprom unsigned char analog[4][4]={     // [0]-> dТ смещение температуры; [1]-> Проп. коэфф.; [2]-> MIN; [4]-> MAX
+                    {20, 80, 0, 100},  // 0 - Аналоговый ВЫХОД I   Тунельная вентиляция
+                    {10,100, 0, 100},  // 1 - Аналоговый ВЫХОД II  Положение заслонок вытяжной вентиляции
+                    {15, 40, 0, 100},  // 2 - Аналоговый ВЫХОД III Положение заслонок приточной вентиляции
+                    { 5, 40, 0, 100}}; // 3 - Аналоговый ВЫХОД IV  Положение клапана горячей воды.
 
 bit Sec;          // новая секунда
 bit Display;      // обновить дисплай
 bit Clock_Ok;
-
-//#define FLG0    flags.0
-//#define FLG1    flags.1
-//#define FLG2    flags.2
-//#define FLG3    flags.3
-
 
 //- prototypes ------
 void display(void);
@@ -159,15 +154,15 @@ signed char x, byte;
         for (byte=0; byte<4; byte++) if(analogSet[byte]>=0) {noAutoAna++; errors|=0x10;} // проверка - все ли находится в автоматическом режиме
     //------ считывание значений температуры ---------
         if(ds18b20) temperature_check();          
-        pvT = mean(ds18b20-1); 
+        if(ds18b20>1) pvT = mean(ds18b20-1); else pvT = t[0]; 
     //------ Аналитика ----------------------------------------------------------------------------
-        for (byte=0;byte<4;byte++){dacU[byte]=analog[byte][2];};// минимальное задание каналов 1,2,3,4
+//        for (byte=0;byte<4;byte++){dacU[byte]=analog[byte][2];};// минимальное задание каналов 1,2,3,4
         control(pvT);                         // Среднее значение датчиков воздуха (2 шт.) 
         if(errors&0x08){                      // выключаем всё если ошибка среднего значения
             for (byte=0;byte<4;byte++){relOut[byte]=OFF; relayOut &= ~(1<<(byte+4));}// все Off
             for (byte=0;byte<4;byte++){dacU[byte] = 0;} // все 0%               
         }
-        for (byte=0;byte<4;byte++) if(analogSet[byte]>=0) dacU[byte]=adapt(analogSet[byte]); else dacU[byte] = adapt(dacU[byte]);         
+        for (byte=0;byte<4;byte++) if(analogSet[byte]>=0) dacU[byte]=adapt(analogSet[byte]); else dacU[byte] = adapt(analogOut[byte]);         
     //------ Проверка на ручное управление --------------------------------------------------------        
         for (byte=0;byte<4;byte++){
             if(relaySet[byte]==1) {relOut[byte]=ON;  relayOut |= (1<<(byte+4));} // ручной On
@@ -187,7 +182,7 @@ signed char x, byte;
       //----------
 //      sprintf(buff,"rOut 0x%02x",relayOut&0xF0);
 //      ILI9341_WriteString(5,200,buff,Font_11x18,WHITE,BLACK,1);
-      sprintf(buff,"Dn%2u nM%2u sM%2u nS%2u FL0x%x",displ_num,numMenu,subMenu,numSet,flags);
+      sprintf(buff,"Dn%2u nM%2u sM%2u nS%2u Er%3u",displ_num,numMenu,subMenu,numSet,errors);
       ILI9341_WriteString(5,220,buff,Font_11x18,WHITE,BLACK,1);
       //----------
     }

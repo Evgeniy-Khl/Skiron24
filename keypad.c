@@ -80,8 +80,8 @@ void checkkey(unsigned char key){
                         for (byte=2;byte<5;byte++) newval[byte] = rtcTodec(clock_buffer[byte+2]);
                     break;     
                     case 4: for (byte=0;byte<LIST4;byte++) newval[byte] = spT[byte+3]; break;  // "Bluetooth","Iíøå"
-                    case 1: displ_num=6; subMenu=0; numSet=0; break;  // "Ùàáëi"
-                    case 2: displ_num=7; subMenu=0; numSet=0; break;  // "Ôóíêöiÿ"
+                    case 1: displ_num=6; subMenu=0; break;  // "Ùàáëi"
+                    case 2: displ_num=7; subMenu=0; break;  // "Ôóíêöiÿ"
                 } 
             break;
          }

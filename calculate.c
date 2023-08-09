@@ -1,25 +1,18 @@
 unsigned char UpdatePI(signed int error, char i)// i-> индекс iPart[i]; time-> период между замерами ошибки регулирования
 {
-float pPart, Kp, Ki, Ud;//
+float pPart, Kp;//
   Kp = (float) analog[i][1]/4;   // Пропорциональный    analog[i][1]=20/4=5
-  Ki = (float) analog[i][2]*100; // Интегральный        analog[i][2]=100*100=10000
   pPart = (float) Kp * error;    // расчет пропорциональной части
   //---- функция ограничения pPart -----------------------------
-  if(pPart <0){pPart = 0; iPart[i] = 0;} else if(pPart > 100) pPart = 100; // функция ограничения ????? if(pPart <=0)
-//--------------------------------------------------------------
-  iPart[i] += (float) Kp / Ki  * error; // приращение интегральной части  
-  Ud = pPart + iPart[i];                // выход регулятора до ограничения
-//------ функция ограничения -----------------------------------
-  if(Ud < 0) Ud = 0; else if(Ud > 100) Ud = 100;
-  iPart[i] = Ud - pPart;                // "антинасыщяющая" поправка
-  error = Ud;                           // преобразование формата из float к signed int
+  if(pPart <0) pPart = 0; else if(pPart > 100) pPart = 100; // функция ограничения ????? if(pPart <=0)
+  error = pPart;                           // преобразование формата из float к signed int
   return error;
 };
 
-signed int LowPassF2(signed int t,unsigned char i,unsigned char n)
+signed int LowPassF2(signed int pV,unsigned char i)
 {
 float val;
-  val = A1[n]*Told1[i]-A2[n]*Told2[i]+A3[n]*t;
+  val = A1*Told1[i]-A2*Told2[i]+A3*pV;
   Told2[i] = Told1[i];
   Told1[i] = val;
   return val;
@@ -37,19 +30,20 @@ void calcDj(signed int actualT){      // Расчетное задание ЦИФРОВЫХ выходов № 1,
 
 void calcAn(signed int actualT)      // Расчетное задание АНАЛОГОВЫХ выходов № 1,2,3,4
 {
- unsigned char i, xx;
+ unsigned char i;
  signed int err; 
     for (i=0;i<4;i++){     
      if(i==3){                                          // Положение клапана горячей воды. 
         err = (spT[2] + analog[i][0]) - actualT;        // spT[2] -> Нижня межа
      }
-     else err = actualT - (spT[0] + analog[i][0]);      // analog[i][0]-> dТ смещение температуры;
-     xx = (1<<i);
-     if(!(flags&xx) && err>0){flags |= xx; iPart[i]=0; err = UpdatePI(err,0);}
-     else if(flags&xx) {flags &= ~xx; err=0;}           // закрыть заслонку
-     if(xx>analog[i][4]) err = analog[i][4];
-     if(xx<analog[i][3]) err = analog[i][3];
-     dacU[i] = err;
+     else err = actualT - (spT[0] + analog[i][0]);      // analog[i][0]-> dТ смещение температуры;;
+     if(err>0){  
+         err = UpdatePI(err,i);                         // расчет управляющего напряжения
+         if(err>analog[i][3]) err = analog[i][3];
+         if(err<analog[i][2]) err = analog[i][2];
+     }
+     else err=0;
+     analogOut[i] =  LowPassF2(err, i);
     };
 }
 
