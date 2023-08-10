@@ -4,7 +4,7 @@ Version        : 0.0
 Date           : 30.07.2023
 Chip type      : ATmega32
 Clock frequency: 16,000000 MHz
-Program size   : 10823 words (21646 bytes), 66,1% of FLASH [xxxx] EEPROM [xxxx] 31.07.2023
+Program size   : 11383 words (22766 bytes), 69,5% of FLASH [xxxx] EEPROM [xxxx] 10.08.2023
 *******************************************************/
 
 #include <mega32.h>
@@ -39,17 +39,10 @@ Program size   : 10823 words (21646 bytes), 66,1% of FLASH [xxxx] EEPROM [xxxx] 
 #define LIST2           5
 #define LIST3           5
 #define LIST4           2
-#define MENU2           5
-#define MENU3           3
-#define MAX_5           5
-#define MAX_6           6
-#define MISTAKE         3
 #define ZERO	        50
 
-#define DATAREAD        0xA1      // Read Scratchpad
 #define SPI_MOUD_DSP    0xD2      // Mode 0; Clock Rate: 250,000 kHz; SPI Interrupt Enable.
 #define SPI_MOUD_FL	    0x51	  // SPI Type: Master, Clock Rate: 1000,000 kHz, Clock Phase: Cycle Half, Clock Polarity: Low, Data Order: MSB First
-#define TWI_CLK_RATE    100000    // TWI clock rate [bps]
 #define ADC_VREF_TYPE   0x40
 #define F_XTAL			16000L               //quartz crystal frequency [KHz]
 #define INIT_TIMER0     TCNT0 = 0x100L-F_XTAL/1024L*5L    // 5 ms
@@ -62,12 +55,12 @@ Program size   : 10823 words (21646 bytes), 66,1% of FLASH [xxxx] EEPROM [xxxx] 
 // Declare your global variables here
 //flash float A1=1.8, A2=0.81, A3=0.01;  // порядок a=0.9 (A1=2a; A2=a^2; A3=(1-a)^2)
 flash float A1=1.6, A2=0.64, A3=0.04;  // порядок a=0.8 (A1=2a; A2=a^2; A3=(1-a)^2)
-unsigned char BeepT, keynum, keycount, keywait, ok, relayOut, newSetButt, ds18b20, pointY, DHTexist, signchar, intval, frcval, errors, noAutoRel, noAutoAna;
-signed char numMenu, subMenu, numSet, displ_num, pauseEdit;
-unsigned char relOut[4]={0}, analogOut[4]={0}, dacU[4]={ZERO}, buff[40], familycode[MAX_DEVICES][9], clock_buffer[CLOCK_BUFFER], alarm[4]={2,2,2,2};
-unsigned int  max_X, max_Y, timerOn, timerOff, fillScreen = BLACK;
-signed int pvT=1990, offsetT, pvRH=1990, offsetRH, newval[7], t[MAX_DEVICES], hum[MAX_DEVICES];
-unsigned char *ptr_char;
+unsigned char BeepT, keynum, keycount, keywait, relayOut, newSetButt, ds18b20, signchar, intval, frcval, errors, noAutoRel, noAutoAna;
+signed char numMenu, subMenu, numSet, displ_num;//, pauseEdit;
+unsigned char relOut[4]={0}, analogOut[4]={0}, dacU[4]={ZERO}, buff[40], familycode[MAX_DEVICES][9], clock_buffer[CLOCK_BUFFER];//, alarm2[4]={2,2,2,2};
+unsigned int  max_X, max_Y, fillScreen = BLACK;
+signed int pvT=1990, newval[7], t[MAX_DEVICES];
+
 const char* setMenu[MENU]={"Головны","Щаблы","Функцыя","Час Дата","Системны"};     // Главное меню
 const char* setName0[LIST0]={"Температура","Верхня межа","Нижня межа"}; // подменю "Головнi"
 const char* setName1[LIST1]={"Змыщення", "Гыстер."};                    // подменю "Щаблі"

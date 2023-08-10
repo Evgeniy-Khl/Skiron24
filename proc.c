@@ -3,6 +3,7 @@
 void temperature_check(void){
  int val;
  unsigned char item, byte, crc, try=0;
+ unsigned char *ptr_char;
     for (item=0; item < ds18b20;){
         w1_init();                 // 1 Wire Bus initialization
         w1_write(0x55);            // Load MATCH ROM [55H] comand

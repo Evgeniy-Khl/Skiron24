@@ -109,7 +109,7 @@ pointY = pointY+45;
 sprintf(buff,"Датчикыв температури %u",ds18b20);    // количество датчиков
 ILI9341_WriteString(10, pointY, buff, Font_11x18, WHITE, fillScreen, 1);
 
-Sec=1; Display=1; newSetButt=1; timerOn=1; timerOff=1;
+Sec=1; Display=1; newSetButt=1;
 temperature_check();
 BeepT=50;
 delay_ms(1000);

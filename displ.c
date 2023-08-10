@@ -1,4 +1,4 @@
-unsigned char txt[20];
+unsigned char pointY, txt[20];
 
 void fraction(signed int t){
   if (t<0) {t = -t; signchar = '-';} else signchar = ' ';
@@ -36,14 +36,9 @@ void displ_0(void){
         temp = pvT; fraction(temp);     // проверка знака температуры
         sprintf(buff,"%2u.%u",intval,frcval); // T датчиков показываем с десятичным знаком 
     }
+    if(errors&0xC0) bordWindow = RED;   // Температура ВЫСОКАЯ / НИЗКАЯ
     ILI9341_WriteString(140,pointY,buff,Font_11x18,bordWindow,fillWindow,3);
-    // индикация тревоги alarm[0]
-    switch (alarm[0]) {
-        case 0: temp=GREEN; break;
-        case 1: temp=RED;   break;
-        default: temp=fillWindow;
-    }; 
-    ILI9341_FillRectangle(280,pointY+2,30,45,temp);
+    bordWindow = BLACK;
     if(keynum&&!keystop){checkkey(keynum); return;}//***************************** проверим нажатие кнопки ***************************************
     pointY += 52;
 //--- 
@@ -52,19 +47,13 @@ void displ_0(void){
     ILI9341_WriteString(5,pointY+16,"температура",Font_11x18,bordWindow,fillWindow,1);    
     if(temp<1250) sprintf(buff,"%2u.%u",intval,frcval); else sprintf(buff,"**.*");
     ILI9341_WriteString(142,pointY,buff,Font_11x18,bordWindow,fillWindow,2); 
-    // индикация тревоги alarm[1]
-    switch (alarm[1]) {
-        case 0: temp=GREEN; break;
-        case 1: temp=RED;   break;
-        default: temp=fillWindow;
-    };    
-    ILI9341_FillRectangle(280,pointY+2,30,45,temp);
     if(keynum&&!keystop){checkkey(keynum); return;}//***************************** проверим нажатие кнопки ***************************************
 // --- Состояние выходов -------
     pointY += 43;
     ILI9341_WriteString(70,pointY,"СТАН УПРАВЛЫННЯ",Font_11x18,bordWindow,fillWindow,1);
     ILI9341_FillScreen(0, max_X,135, max_Y, fillWindow);
     if(errors){
+        BeepT=100;
         if(errors&0x03){pointY += 18;      ILI9341_WriteString(5,pointY,"Помилка внутрышных датчикыв",Font_11x18,RED,fillWindow,1);}
         else if(errors&0x04){pointY += 18; ILI9341_WriteString(5,pointY,"Помилка зовнішнього датчика",Font_11x18,RED,fillWindow,1);}
         else if(errors&0xC0){pointY += 18; ILI9341_WriteString(5,pointY,"Велике відхилення температур",Font_11x18,RED,fillWindow,1);}           
@@ -243,7 +232,7 @@ void displ_5(void){
     pointY=7;
     if(newSetButt){
         ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
-        pauseEdit = 3;
+//        pauseEdit = 3;
         sprintf(buff,"РЕДАГУВАННЯ %s", setMenu[numMenu]);
         ILI9341_WriteString(20,pointY,buff,Font_11x18,bordWindow,fillWindow,1); 
     }
@@ -268,7 +257,8 @@ void displ_5(void){
         break;
     }
    newSetButt=0;
-   if(--pauseEdit==0){pauseEdit=1; if(keynum) checkkey(keynum);}//***************************** проверим нажатие кнопки ***************************************
+//   if(--pauseEdit==0){pauseEdit=1; if(keynum) checkkey(keynum);}//***************************** проверим нажатие кнопки ***************************************
+   if(keynum) checkkey(keynum);//***************************** проверим нажатие кнопки ***************************************
 }
 
 //-------------------------------- Установки ступеней ** numMenu=1; subMenu=0->"Змiщення", subMenu=1->"Гiстерезис"--
@@ -324,7 +314,7 @@ void displ_8(void){
   pointY=7;
   if (newSetButt){
     newSetButt=0; ILI9341_FillScreen(0, max_X, 0, max_Y, fillWindow);
-    pauseEdit = 3;
+//    pauseEdit = 3;
     sprintf(buff,"РЕДАГУВАННЯ %s T%u",setName1[subMenu],numSet+1);
     ILI9341_WriteString(10,pointY,buff,Font_11x18,bordWindow,fillWindow,1); 
   }
@@ -333,7 +323,8 @@ void displ_8(void){
     temp = newval[numSet]; tmpv0 = temp%10; tmpv1 = temp/10;
     sprintf(buff,"%s:%2u.%u",setName1[subMenu],tmpv1,tmpv0);
     ILI9341_WriteString(5,pointY,buff,Font_11x18,bordWindow,fillWindow,2);
-    if(--pauseEdit==0){pauseEdit=1; if(keynum) checkkey(keynum);}//***************************** проверим нажатие кнопки ***************************************
+//    if(--pauseEdit==0){pauseEdit=1; if(keynum) checkkey(keynum);}//***************************** проверим нажатие кнопки ***************************************
+   if(keynum) checkkey(keynum);//***************************** проверим нажатие кнопки ***************************************
 }
 
 //-------------------- РЕДАКТИРОВАНИЕ Установки функций  ** numMenu=1; subMenu=0->"Змiщення", subMenu=1->"КОФ.1"...  --
